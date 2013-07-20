@@ -242,7 +242,7 @@ class EegTrial:
         columns to channel numbers,then sort the columns, then sort the index, then
         transform to numpy.array, then finally take the transpose to get D x T.
         """
-        return self.data.rename(columns=self.channels).sort(axis=1).sort_index().as_matrix().T
+        return self.data.sort(axis=1).sort_index().as_matrix().T
 
     def to_pickle(self, path='', filename=None):
         """Pickle (serialize) EegTrial object to disk.
