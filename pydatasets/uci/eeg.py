@@ -240,9 +240,9 @@ class EegTrial:
         Notice what we do here: we start with a pandas.DataFrame where each channel
         is a column (so you can think of it as a T x D matrix). We first rename the
         columns to channel numbers,then sort the columns, then sort the index, then
-        transform to numpy.array, then finally take the transpose to get D x T.
+        transform to numpy.array, then finally take the transpose to get T x D.
         """
-        return self.data.sort(axis=1).sort_index().as_matrix().T
+        return self.data.sort(axis=1).sort_index().reset_index().as_matrix()
 
     def to_pickle(self, path='', filename=None):
         """Pickle (serialize) EegTrial object to disk.

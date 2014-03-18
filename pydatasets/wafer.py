@@ -11,6 +11,8 @@ class WaferRun:
         self.wafer_id = int(wafer_id)
         self.label = int(label)
         self.measurements = DataFrame(measurements)
+        self.measurements.sort(axis=1, inplace=True)
+        self.measurements.sort_index(inplace=True)
     
     @staticmethod
     def from_files(path, run_id, wafer_id):
@@ -35,13 +37,12 @@ class WaferRun:
         return WaferRun(run_id, wafer_id, label, df)
     
     def as_nparray(self):
-        """Spits out data as a D x T numpy.array (D=# channels, T=# samples)
+        """Spits out data as a T x D numpy.array (T=# samples, D=# variables)
 
         Notes:
         Notice what we do here: we start with a pandas.DataFrame where each channel
         is a column (so you can think of it as a T x D matrix). We first rename the
         columns to channel numbers,then sort the columns, then sort the index, then
-        transform to numpy.array, then finally take the transpose to get D x T.
-        rename(columns=self.wafer_id)
+        transform to numpy.array.
         """
-        return self.measurements.sort(axis=1).sort_index().as_matrix().T
+        return self.measurements.sort(axis=1).sort_index().reset_index().as_matrix().astype(float)
