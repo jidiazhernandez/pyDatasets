@@ -11,7 +11,7 @@ import re
 import csv
 
 from pandas import DataFrame, Series
-from datetime import time, timedelta
+from datetime import datetime, timedelta
 
 class InvalidMPDataException(Exception):
     def __init__(self, field, err, value):
@@ -32,7 +32,7 @@ class MPSubject:
         
     @staticmethod
     def from_file(filename, channels='channels.txt'):
-        match = re.match('\d\d\d\d\d\d.txt', filename) #ensure that file matches given format
+        match = re.match('.*\/\d\d\d\d\d\d.txt', filename) #ensure that file matches given format
         if not match:
             raise InvalidMPDataException('file', 'name', filename)
         openFile = file(filename, 'r') #open patient's text file
@@ -68,21 +68,26 @@ class MPSubject:
                 #handle value entry into channel
                 channel = line[1]
                 try:
-                    
-                    tsmap[channel][0].append(tm)
-                    tsmap[channel][1].append(float(line[2]))
+                    alreadyPresent = False 
+                    for tmd in tsmap[channel][0]:
+                        if tmd == tm:
+                            alreadyPresent = True
+                    if not alreadyPresent:        
+                            tsmap[channel][0].append(tm)
+                            tsmap[channel][1].append(float(line[2]))
                 except KeyError:
                     raise InvalidMPDataException('channel', 'name', channel) 
+                    
         #insert the weight general descriptor as the inital entry for the weight channel            
         tsmap['Weight'][0].insert(0, timedelta(hours=0, minutes=0))
         tsmap['Weight'][1].insert(0, float(gnrlDescript[5]))
         
         #replace lists of lists of timeseries with Series in channel entries
         for key in tsmap:
-            tsmap[key] = Series(data=tsmap[key][1], index=tsmap[key][0])
-        print tsmap
-            
-        return MPSubject(int(gnrlDescript[0]), int(gnrlDescript[1]), bool(gnrlDescript[2]), float(gnrlDescript[3]), int(gnrlDescript[4]), float(gnrlDescript[5]), DataFrame.from_dict(tsmap))
+            tsmap[key] = Series(data=tsmap[key][1], index=tsmap[key][0], name=key)
+        dat = DataFrame.from_dict(tsmap)
+
+        return MPSubject(int(gnrlDescript[0]), int(gnrlDescript[1]), bool(gnrlDescript[2]), float(gnrlDescript[3]), int(gnrlDescript[4]), float(gnrlDescript[5]), dat)
         
     def as_nparray(self):
         return self.data.sort(axis=1).sort_index().reset_index().as_matrix()
