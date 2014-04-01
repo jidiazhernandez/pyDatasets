@@ -29,6 +29,7 @@ class MPSubject:
         self._icuType = icuType
         self._weight = weight
         self._data = ts.copy()
+        print self.as_nparray()
         
     @staticmethod
     def from_file(filename, channels='channels.txt'):
@@ -72,7 +73,7 @@ class MPSubject:
                     for tmd in tsmap[channel][0]:
                         if tmd == tm:
                             alreadyPresent = True
-                    if not alreadyPresent:        
+                    if not alreadyPresent:
                             tsmap[channel][0].append(tm)
                             tsmap[channel][1].append(float(line[2]))
                 except KeyError:
@@ -90,7 +91,7 @@ class MPSubject:
         return MPSubject(int(gnrlDescript[0]), int(gnrlDescript[1]), bool(gnrlDescript[2]), float(gnrlDescript[3]), int(gnrlDescript[4]), float(gnrlDescript[5]), dat)
         
     def as_nparray(self):
-        return self.data.sort(axis=1).sort_index().reset_index().as_matrix()
+        return self._data.sort(axis=1).sort_index().reset_index().as_matrix()
       
     
         
