@@ -9,9 +9,10 @@ import os
 import pandas as pd 
 import re 
 import csv
+import pickle
 
 from pandas import DataFrame, Series
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 class InvalidMPDataException(Exception):
     def __init__(self, field, err, value):
@@ -21,7 +22,7 @@ class InvalidMPDataException(Exception):
         self.value = value
 
 class MPSubject:
-    def __init__(self, recordID, age, gender, height, icuType, weight, ts):
+    def __init__(self, recordID, age, gender, height, icuType, weight, channels, ts):
         self._recordID = recordID
         self._age = age
         self._gender = gender
@@ -29,7 +30,7 @@ class MPSubject:
         self._icuType = icuType
         self._weight = weight
         self._data = ts.copy()
-        print self.as_nparray()
+        self._channels = channels.copy()
         
     @staticmethod
     def from_file(filename, channels='channels.txt'):
@@ -40,12 +41,16 @@ class MPSubject:
         tsmap = dict() #dictionary to map channel names to list of lists for time series
         
         #use channels text file to create channels in dict
+        allChannels = dict() #to permanently store channels
+        num = 0
         chans = file(channels, 'r')
         for chan in chans:
             chan = chan.rstrip()
             tsmap[chan] = []
             tsmap[chan].append([])
             tsmap[chan].append([])
+            allChannels[num] = chan
+            num = num + 1
         chans.close()
         
         #add times series data to existing map
@@ -88,13 +93,50 @@ class MPSubject:
             tsmap[key] = Series(data=tsmap[key][1], index=tsmap[key][0], name=key)
         dat = DataFrame.from_dict(tsmap)
 
-        return MPSubject(int(gnrlDescript[0]), int(gnrlDescript[1]), bool(gnrlDescript[2]), float(gnrlDescript[3]), int(gnrlDescript[4]), float(gnrlDescript[5]), dat)
+        return MPSubject(int(gnrlDescript[0]), int(gnrlDescript[1]), bool(gnrlDescript[2]), float(gnrlDescript[3]), int(gnrlDescript[4]), float(gnrlDescript[5]), allChannels, dat)
         
     def as_nparray(self):
-        return self._data.sort(axis=1).sort_index().reset_index().as_matrix()
+        df = self._data.copy()
+        return np.transpose(df.sort(axis=1).sort_index().reset_index().as_matrix()) #I think you have to transpose to get D x T array
       
-    
+    def to_pickle(self, path='', filename=None):
+        """
+        Keyword arguments:
+        path -- path without filename to store pickled object
+        filename -- filename to append to path, optional
+        """
+
+        if filename is None:
+            filename = 'MPSubject-{0._recordID}.pkl'.format(self)
+        filename = os.path.join(path, filename)
+        pickle.dump(self, open(filename, 'w'), pickle.HIGHEST_PROTOCOL)
         
+    @staticmethod
+    def from_pickle(filename):
+        """Create MPSubject object from pickle file."""
+
+        return pickle.load(open(filename, 'r'))
+
+    def to_csv(self, path='', filename_base=None):
+        """
+        Keyword arguments:
+        path -- directory to store CSVs
+        filename_base -- base of filename (extensions will be appended)
+        """
+    
+        if filename_base is None:
+            filename_base = 'MPSubject-{0._recordID}'.format(self)
+            filename_base = os.path.join(path, filename_base)
+            temp = self._data.rename(columns=self._channels).sort(axis=1).sort_index()
+            temp.to_csv(filename_base + '.data', header=False, index=False)
+            f = open(filename_base + '.info', 'w')
+            f.write('subject_id,{0._recordID}\nage,{0._age}\ngender,{1}\nheight,{0._height}\nICUType,{0._icuType}\nweight,{0._weight}'.format(self, 'male' if self._gender else 'female'))
+            f.close()
+
+
+
+
+
     
         
         
