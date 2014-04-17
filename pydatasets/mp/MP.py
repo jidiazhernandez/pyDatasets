@@ -31,6 +31,9 @@ class MPSubject:
         self._weight = weight
         self._data = ts.copy()
         self._channels = channels.copy()
+        print self._data
+        print self.as_nparray()
+        
         
     @staticmethod
     def from_file(filename, channels='channels.txt'):
@@ -70,7 +73,9 @@ class MPSubject:
                 minutes = int(tm.group(2))
                 days = int(hours / 24)
                 hours = hours % 24
-                tm = timedelta(days=days, hours=hours, minutes=minutes)
+                tm = days*24*60 + hours*60 + minutes
+                if tm < 0:
+                    print "Negative time"
                 #handle value entry into channel
                 channel = line[1]
                 try:
@@ -85,7 +90,7 @@ class MPSubject:
                     raise InvalidMPDataException('channel', 'name', channel) 
                     
         #insert the weight general descriptor as the inital entry for the weight channel            
-        tsmap['Weight'][0].insert(0, timedelta(hours=0, minutes=0))
+        tsmap['Weight'][0].insert(0, 0)
         tsmap['Weight'][1].insert(0, float(gnrlDescript[5]))
         
         #replace lists of lists of timeseries with Series in channel entries
@@ -97,8 +102,23 @@ class MPSubject:
         
     def as_nparray(self):
         df = self._data.copy()
-        return np.transpose(df.sort(axis=1).sort_index().reset_index().as_matrix()) #I think you have to transpose to get D x T array
+        return df.sort(axis=1).sort_index().reset_index().as_matrix() #I think you have to transpose to get D x T array
       
+    def as_nparray_resampled(self, hours=None, rate='1H', bucket=True, imput=False, normal_values=None):
+        df = self._data.copy()
+        df.sort(axis=1, inplace=True)
+        df.sort_index(inplace=True)
+        
+        if impute:
+            df = df.resample(rate, how='mean' if bucket else 'first', closed='left', label='left', fill_method='ffill')
+            df.ffill(axis=0, inplace=True)
+            df.bfill(axis=0, inplace=True)
+        else:
+            df = df.resample(rate, how='mean' if bucket else 'first', closed='left', label='left', fill_method=None)
+        
+        df.reset_index(inplace=True)
+        return df.as_matrix()
+        
     def to_pickle(self, path='', filename=None):
         """
         Keyword arguments:
