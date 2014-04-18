@@ -31,8 +31,8 @@ class MPSubject:
         self._weight = weight
         self._data = ts.copy()
         self._channels = channels.copy()
-        print self._data
-        print self.as_nparray()
+        #print self._data
+        #print self.as_nparray()
         
         
     @staticmethod
@@ -90,8 +90,8 @@ class MPSubject:
                     raise InvalidMPDataException('channel', 'name', channel) 
                     
         #insert the weight general descriptor as the inital entry for the weight channel            
-        tsmap['Weight'][0].insert(0, 0)
-        tsmap['Weight'][1].insert(0, float(gnrlDescript[5]))
+        #tsmap['Weight'][0].insert(0, 0)
+        #tsmap['Weight'][1].insert(0, float(gnrlDescript[5]))
         
         #replace lists of lists of timeseries with Series in channel entries
         for key in tsmap:
@@ -104,13 +104,13 @@ class MPSubject:
         df = self._data.copy()
         return df.sort(axis=1).sort_index().reset_index().as_matrix() #I think you have to transpose to get D x T array
       
-    def as_nparray_resampled(self, hours=None, rate='1H', bucket=True, imput=False, normal_values=None):
+    def as_nparray_resampled(self, hours=None, rate='1H', bucket=True, impute=False, normal_values=None):
         df = self._data.copy()
         df.sort(axis=1, inplace=True)
         df.sort_index(inplace=True)
         
         if impute:
-            df = df.resample(rate, how='mean' if bucket else 'first', closed='left', label='left', fill_method='ffill')
+            #df = df.resample(rate, how='mean' if bucket else 'first', closed='left', label='left', fill_method='ffill')
             df.ffill(axis=0, inplace=True)
             df.bfill(axis=0, inplace=True)
         else:

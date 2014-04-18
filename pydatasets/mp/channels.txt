@@ -30,8 +30,8 @@ RespRate
 SaO2
 SysABP
 Temp
-TropI
-TropT
+TroponinI
+TroponinT
 Urine
 WBC
 Weight

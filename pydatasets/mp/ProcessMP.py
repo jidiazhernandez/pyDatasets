@@ -11,11 +11,13 @@ import pandas as pd
 import os 
 import re 
 import scipy.io as sio
+import numpy as np
+import sys
 
 from pandas import Panel, DataFrame, Series
-from pydataset import mp
+import MP
 
-_NOTEBOOK = false; # change to true if you're going to run this locally 
+_NOTEBOOK = False; # change to true if you're going to run this locally 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('data', type=unicode)
@@ -51,19 +53,19 @@ X = []
 Traw = np.zeros((N,), dtype=int)    # Number of (irregular) samples for episode
 T = np.zeros((N,), dtype=int)       # Resampled episode lengths (for convenience)
 age = np.zeros((N,), dtype=int)     # Per-episode patient ages in months
-gender = np.zeros((N,), dtype=int8) # Per-episode patient gender
+gender = np.zeros((N,), dtype=int) # Per-episode patient gender
 weight = np.zeros((N,))             # Per-episode patient weight
 lmf = np.zeros((N,))                # Last-first duration
 
 idx = 0
-for pat in eps:
+for pat in patients:
     try:
-        subj = MP.MPSubject.from_directory(os.path.join(data_dir, subdir))
-    except InvalidMPDataException as e:
+        subj = MP.MPSubject.from_file(os.path.join(data_dir, pat))
+    except MP.InvalidMPDataException as e:
         if e.field == 'msmts' and e.err == 'size':
             count_nodata += 1
         else:
-            sys.stdout.write('\nskipping ' + subdir + ': ' + str(e))
+            sys.stdout.write('\nskipping: ' + str(e))
         continue
     s = subj.as_nparray()
     mylmf  = (s[:,0].max() - s[:,0].min())/60
@@ -74,9 +76,9 @@ for pat in eps:
     Traw[idx] = s.shape[0]
     
     #resample
-    s = subj.as_nparray_resampled(rate=resample_rate, inpute=True)
+    s = subj.as_nparray_resampled(rate=resample_rate, impute=True)
     if not np.all(~np.isnan(s)):
-        print df
+        #print df
         print pat
     X.append(s)
     
@@ -92,15 +94,15 @@ for pat in eps:
     
 #features = features[0:idx,]
 #epids = epids[0:idx]
-Traw = Traw[0:idx]
-T = T[0:idx]
-age = age[0:idx]
-gender = gender[0:idx]
-weight = weight[0:idx]
+#Traw = Traw[0:idx]
+#T = T[0:idx]
+#age = age[0:idx]
+#gender = gender[0:idx]
+#weight = weight[0:idx]
 #y = y[0:idx]
 #pdiag = pdiag[0:idx]
 #los = los[0:idx]
-lmf = lmf[0:idx]
+#lmf = lmf[0:idx]
     
     
     
