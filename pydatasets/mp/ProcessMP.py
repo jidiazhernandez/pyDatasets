@@ -58,6 +58,7 @@ weight = np.zeros((N,))             # Per-episode patient weight
 lmf = np.zeros((N,))                # Last-first duration
 
 idx = 0
+count_nodata = 0
 for pat in patients:
     try:
         subj = MP.MPSubject.from_file(os.path.join(data_dir, pat))
@@ -68,6 +69,9 @@ for pat in patients:
             sys.stdout.write('\nskipping: ' + str(e))
         continue
     s = subj.as_nparray()
+    if s.size == 0: 
+        print subj
+        continue
     mylmf  = (s[:,0].max() - s[:,0].min())/60
     
     #store raw time series

@@ -68,7 +68,7 @@ class MPSubject:
                 #handle date
                 tm = re.match("(\d\d)\:(\d\d)", line[0])
                 if not match:
-                    raise InvalidMPDataException() #need args
+                    print line[0] #need args
                 hours = int(tm.group(1))
                 minutes = int(tm.group(2))
                 days = int(hours / 24)
@@ -98,7 +98,7 @@ class MPSubject:
             tsmap[key] = Series(data=tsmap[key][1], index=tsmap[key][0], name=key)
         dat = DataFrame.from_dict(tsmap)
 
-        return MPSubject(int(gnrlDescript[0]), int(gnrlDescript[1]), bool(gnrlDescript[2]), float(gnrlDescript[3]), int(gnrlDescript[4]), float(gnrlDescript[5]), allChannels, dat)
+        return MPSubject(round(float(gnrlDescript[0])), round(float(gnrlDescript[1])), bool(gnrlDescript[2]), float(gnrlDescript[3]), round(float(gnrlDescript[4])), float(gnrlDescript[5]), allChannels, dat)
         
     def as_nparray(self):
         df = self._data.copy()
@@ -152,39 +152,4 @@ class MPSubject:
             f = open(filename_base + '.info', 'w')
             f.write('subject_id,{0._recordID}\nage,{0._age}\ngender,{1}\nheight,{0._height}\nICUType,{0._icuType}\nweight,{0._weight}'.format(self, 'male' if self._gender else 'female'))
             f.close()
-
-
-
-
-
-    
-        
-        
-        
-                    
-                
-                    
-                
-                
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-            
-        
-        
-        
-            
-            
-        
-        
-        
-        
-        
         
