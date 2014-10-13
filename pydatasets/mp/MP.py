@@ -10,6 +10,7 @@ import pandas as pd
 import re 
 import csv
 import pickle
+import copy
 
 from pandas import DataFrame, Series
 from datetime import timedelta
@@ -22,7 +23,7 @@ class InvalidMPDataException(Exception):
         self.value = value
 
 class MPSubject:
-    def __init__(self, recordID, age, gender, height, icuType, weight, channels, ts):
+    def __init__(self, recordID, age, gender, height, icuType, weight, ts, condValues):
         self._recordID = recordID
         self._age = age
         self._gender = gender
@@ -30,32 +31,23 @@ class MPSubject:
         self._icuType = icuType
         self._weight = weight
         self._data = ts.copy()
-        self._channels = channels.copy()
+        self._condValues = condValues.copy()
         #print self._data
         #print self.as_nparray()
         
         
     @staticmethod
-    def from_file(filename, channels='channels.txt'):
+    def from_file(filename, channelsDict):
         match = re.match('.*\/\d\d\d\d\d\d.txt', filename) #ensure that file matches given format
         if not match:
             raise InvalidMPDataException('file', 'name', filename)
         openFile = file(filename, 'r') #open patient's text file
-        tsmap = dict() #dictionary to map channel names to list of lists for time series
-        
-        #use channels text file to create channels in dict
-        allChannels = dict() #to permanently store channels
-        num = 0
-        chans = file(channels, 'r')
-        for chan in chans:
-            chan = chan.rstrip()
-            tsmap[chan] = []
-            tsmap[chan].append([])
-            tsmap[chan].append([])
-            allChannels[num] = chan
-            num = num + 1
-        chans.close()
-        
+        tsmap = copy.deepcopy(channelsDict) #dictionary to map channel names to list of lists for time series
+        for key in tsmap:
+            tsmap[key].append([])
+            tsmap[key].append([])
+        featureMap = copy.deepcopy(channelsDict) #dict to hold a condensed list of features
+
         #add times series data to existing map
         openFile.readline()
         attrCount = 0 #count of general descriptors read
@@ -84,8 +76,10 @@ class MPSubject:
                         if tmd == tm:
                             alreadyPresent = True
                     if not alreadyPresent:
-                            tsmap[channel][0].append(tm)
-                            tsmap[channel][1].append(float(line[2]))
+                        tsmap[channel][0].append(tm)
+                        val = float(line[2])
+                        tsmap[channel][1].append(val)
+                        featureMap[channel].append(val)
                 except KeyError:
                     raise InvalidMPDataException('channel', 'name', channel) 
                     
@@ -98,7 +92,10 @@ class MPSubject:
             tsmap[key] = Series(data=tsmap[key][1], index=tsmap[key][0], name=key)
         dat = DataFrame.from_dict(tsmap)
 
-        return MPSubject(round(float(gnrlDescript[0])), round(float(gnrlDescript[1])), bool(gnrlDescript[2]), float(gnrlDescript[3]), round(float(gnrlDescript[4])), float(gnrlDescript[5]), allChannels, dat)
+        return MPSubject(round(float(gnrlDescript[0])), round(float(gnrlDescript[1])), bool(gnrlDescript[2]), float(gnrlDescript[3]), round(float(gnrlDescript[4])), float(gnrlDescript[5]), dat, featureMap)
+        
+    def condensed_values(self):
+         return self._condValues       
         
     def as_nparray(self):
         df = self._data.copy()

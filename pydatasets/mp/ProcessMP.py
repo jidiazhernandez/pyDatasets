@@ -13,6 +13,9 @@ import re
 import scipy.io as sio
 import numpy as np
 import sys
+import time
+import copy
+import csv
 
 from pandas import Panel, DataFrame, Series
 import MP
@@ -22,7 +25,8 @@ _NOTEBOOK = False; # change to true if you're going to run this locally
 parser = argparse.ArgumentParser()
 parser.add_argument('data', type=unicode)
 parser.add_argument('out', type=unicode)
-#parser.add_argument('-vi', '--var_info', type=unicode, default='../../data/vpicu/physiologic-variable-normals.csv') # I need to ook at this
+parser.add_argument('outcomes', type=unicode)
+#parser.add_argument('-vi', '--var_info', type=unicode, default='../../data/vpicu/physiologic-variable-normals.csv') # I need to look at this
 parser.add_argument('-rr', '--resample_rate', type=int, default=60)
 parser.add_argument('-ma', '--max_age', type=int, default=18)
 
@@ -33,6 +37,7 @@ else:
     
 data_dir = args.data
 out_dir = args.out
+outcomes_dir = args.outcomes
 try:
     os.makedirs(out_dir)
 except:
@@ -50,51 +55,131 @@ Xraw = []
 Xmiss = []
 X = []
 
-Traw = np.zeros((N,), dtype=int)    # Number of (irregular) samples for episode
-T = np.zeros((N,), dtype=int)       # Resampled episode lengths (for convenience)
-age = np.zeros((N,), dtype=int)     # Per-episode patient ages in months
-gender = np.zeros((N,), dtype=int) # Per-episode patient gender
-weight = np.zeros((N,))             # Per-episode patient weight
-lmf = np.zeros((N,))                # Last-first duration
+#Traw = np.zeros((N,), dtype=int)    # Number of (irregular) samples for episode
+#T = np.zeros((N,), dtype=int)       # Resampled episode lengths (for convenience)
+#age = np.zeros((N,), dtype=int)     # Per-episode patient ages in months
+#gender = np.zeros((N,), dtype=int) # Per-episode patient gender
+#weight = np.zeros((N,))             # Per-episode patient weight
+#lmf = np.zeros((N,))                # Last-first duration
+
+allCondensedVals = None
+channels = 'channels.txt'
+channelsDict = dict()
+
+num = 0
+chans = file(channels, 'r')
+for chan in chans:
+    chan = chan.rstrip()
+    channelsDict[chan] = {}
+    num = num + 1
+chans.close()
+
+data_dict = {'sampling_rate': {'mean': [], 'standard_dev': None }, 'value': {'mean': [], 'standard_dev': None }, 'missing': 0 } 
+
+meta_statics = copy.deepcopy(data_dict)
+
+patient_stats = copy.deepcopy(channelsDict)
+overall_stats = copy.deepcopy(channelsDict)
+for key in channelsDict:
+    patient_stats[key] = copy.deepcopy(data_dict)
+    overall_stats[key] = copy.deepcopy(data_dict)
+
+for key in channelsDict:
+    channelsDict[key] = []
 
 idx = 0
 count_nodata = 0
+total_time_start = time.time()
 for pat in patients:
+    start_create = time.time()
     try:
-        subj = MP.MPSubject.from_file(os.path.join(data_dir, pat))
+        subj = MP.MPSubject.from_file(os.path.join(data_dir, pat), channelsDict)
     except MP.InvalidMPDataException as e:
+        count_nodata += 1
         if e.field == 'msmts' and e.err == 'size':
-            count_nodata += 1
+            pass
         else:
             sys.stdout.write('\nskipping: ' + str(e))
         continue
+    end_create = time.time()
+    print "Time to create: " 
+    print (end_create - start_create)
+    start_post = time.time()
+    if allCondensedVals is None: 
+        allCondensedVals = subj.condensed_values()
+    else:
+        condVals = subj.condensed_values()
+        for feature in allCondensedVals:
+            if condVals[feature]:
+                patient_stats[feature]['value']['mean'].append( np.mean(condVals[feature]) )
+                patient_stats[feature]['sampling_rate']['mean'].append( len(condVals[feature]) )
+                
+                overall_stats[feature]['value']['mean'] += condVals[feature]
+                overall_stats[feature]['sampling_rate']['mean'].append( len(condVals[feature]) )
+                
+                allCondensedVals[feature] += (condVals[feature])
+            else:
+                patient_stats[feature]['missing'] = 1
+                overall_stats[feature]['missing'] += 1
+                
     s = subj.as_nparray()
     if s.size == 0: 
-        print subj
+        print 'getting skipped'
         continue
     mylmf  = (s[:,0].max() - s[:,0].min())/60
     
     #store raw time series
     Xraw.append(s)
-    lmf[idx] = mylmf
-    Traw[idx] = s.shape[0]
     
     #resample
-    s = subj.as_nparray_resampled(rate=resample_rate, impute=True)
+    sr = subj.as_nparray_resampled(rate=resample_rate, impute=True)
+    #first couple resampled have nan vals
     if not np.all(~np.isnan(s)):
-        #print df
         print pat
-    X.append(s)
+    X.append(sr)
     
-    T[idx] = s.shape[0]
-    age[idx] = subj._age
-    gender[idx] = subj._gender
-    weight[idx] = subj._weight
-    
-    #y[idx]   = np.nan if ep.died is None else 1 if ep.died else 0
-    #pdiag[idx]  = ep.prim_diag
     
     idx += 1
+    end_post = time.time()
+    print "Time for post logic: " 
+    print (end_post - start_post)
+
+
+for feature in allCondensedVals:
+    overall_stats[feature]['value']['standard_dev'] = np.std(overall_stats[feature]['value']['mean'])
+    overall_stats[feature]['value']['mean'] = np.mean(overall_stats[feature]['value']['mean'])
+    overall_stats[feature]['sampling_rate']['standard_dev'] = np.std(overall_stats[feature]['sampling_rate']['mean'])
+    overall_stats[feature]['sampling_rate']['mean'] = np.mean(overall_stats[feature]['sampling_rate']['mean'])
+    
+    patient_stats[feature]['value']['standard_dev'] = np.std(patient_stats[feature]['value']['mean'])
+    patient_stats[feature]['value']['mean'] = np.mean(patient_stats[feature]['value']['mean'])
+    patient_stats[feature]['sampling_rate']['standard_dev'] = np.std(patient_stats[feature]['sampling_rate']['mean'])
+    patient_stats[feature]['sampling_rate']['mean'] = np.mean(patient_stats[feature]['sampling_rate']['mean'])
+    
+    overall_stats[feature]['missing'] = overall_stats[feature]['missing'] / float(idx - count_nodata)
+    patient_stats[feature]['missing'] = patient_stats[feature]['missing'] / float(idx - count_nodata)
+
+print 'overall'        
+print overall_stats
+print 'patient'     
+print patient_stats    
+total_time_end = time.time()
+#print allCondensedVals 
+print "Total elapsed time: "
+print (total_time_end - total_time_start) 
+
+#outcome code
+outcomeFile = file(outcomes_dir, 'r')
+outcomeFile.readline()
+numPatients = 0
+deathCount = 0
+for line in csv.reader(outcomeFile, delimiter=','):
+    if line[5]:
+        numPatients += 1
+        deathCount += int(line[5])
+deathPercentage = float(deathCount) / float(numPatients)
+print 'death percentage: '
+print deathPercentage
     
 #features = features[0:idx,]
 #epids = epids[0:idx]
