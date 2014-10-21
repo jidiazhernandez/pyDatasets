@@ -54,6 +54,7 @@ N = len(patients)
 Xraw = []
 Xmiss = []
 X = []
+allPatientObjs = dict()
 
 #Traw = np.zeros((N,), dtype=int)    # Number of (irregular) samples for episode
 #T = np.zeros((N,), dtype=int)       # Resampled episode lengths (for convenience)
@@ -102,6 +103,7 @@ for pat in patients:
             sys.stdout.write('\nskipping: ' + str(e))
         continue
     end_create = time.time()
+    allPatientObjs[subj._recordID] = subj
     print "Time to create: " 
     print (end_create - start_create)
     start_post = time.time()
@@ -173,13 +175,31 @@ outcomeFile = file(outcomes_dir, 'r')
 outcomeFile.readline()
 numPatients = 0
 deathCount = 0
+no_outcome = 0
+length_stays = []
 for line in csv.reader(outcomeFile, delimiter=','):
-    if line[5]:
-        numPatients += 1
-        deathCount += int(line[5])
+    numPatients += 1
+    rID = int(line[0])
+    if rID in allPatientObjs:
+        patObj = allPatientObjs[rID]
+        death = int(line[5])
+        patObj.death = death
+        deathCount += death
+        los = int(line[3])
+        patObj.length_of_stay = los
+        length_stays.append(los)
+        patObj.to_pickle('/Users/dbell/Desktop/pickled_data')
+    else:
+        no_outcome += 1
 deathPercentage = float(deathCount) / float(numPatients)
+mean_length_stay = np.mean(length_stays)
+standard_dev_length_stay = np.std(length_stays)
 print 'death percentage: '
 print deathPercentage
+print 'No data: '
+print count_nodata
+print 'No outcome: '
+print no_outcome
     
 #features = features[0:idx,]
 #epids = epids[0:idx]

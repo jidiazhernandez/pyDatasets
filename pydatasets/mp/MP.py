@@ -95,7 +95,13 @@ class MPSubject:
         return MPSubject(round(float(gnrlDescript[0])), round(float(gnrlDescript[1])), bool(gnrlDescript[2]), float(gnrlDescript[3]), round(float(gnrlDescript[4])), float(gnrlDescript[5]), dat, featureMap)
         
     def condensed_values(self):
-         return self._condValues       
+         return self._condValues   
+         
+    def get_data(self):
+        return self._data.copy()
+        
+    def printObj(self):
+        print self.__dict__
         
     def as_nparray(self):
         df = self._data.copy()
