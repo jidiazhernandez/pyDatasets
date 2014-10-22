@@ -92,7 +92,7 @@ class MPSubject:
             tsmap[key] = Series(data=tsmap[key][1], index=tsmap[key][0], name=key)
         dat = DataFrame.from_dict(tsmap)
 
-        return MPSubject(round(float(gnrlDescript[0])), round(float(gnrlDescript[1])), bool(gnrlDescript[2]), float(gnrlDescript[3]), round(float(gnrlDescript[4])), float(gnrlDescript[5]), dat, featureMap)
+        return MPSubject(int(round(float(gnrlDescript[0]))), round(float(gnrlDescript[1])), bool(gnrlDescript[2]), float(gnrlDescript[3]), round(float(gnrlDescript[4])), float(gnrlDescript[5]), dat, featureMap)
         
     def condensed_values(self):
          return self._condValues   

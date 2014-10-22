@@ -188,6 +188,8 @@ for line in csv.reader(outcomeFile, delimiter=','):
         los = int(line[3])
         patObj.length_of_stay = los
         length_stays.append(los)
+        if hasattr(patObj, '_condValues'):
+            del patObj._condValues
         patObj.to_pickle('/Users/dbell/Desktop/pickled_data')
     else:
         no_outcome += 1
