@@ -77,8 +77,6 @@ chans.close()
 
 data_dict = {'sampling_rate': {'mean': [], 'standard_dev': None }, 'value': {'mean': [], 'standard_dev': None }, 'missing': 0 } 
 
-meta_statics = copy.deepcopy(data_dict)
-
 patient_stats = copy.deepcopy(channelsDict)
 overall_stats = copy.deepcopy(channelsDict)
 for key in channelsDict:
@@ -104,8 +102,8 @@ for pat in patients:
         continue
     end_create = time.time()
     allPatientObjs[subj._recordID] = subj
-    print "Time to create: " 
-    print (end_create - start_create)
+    #print "Time to create: " 
+    #print (end_create - start_create)
     start_post = time.time()
     if allCondensedVals is None: 
         allCondensedVals = subj.condensed_values()
@@ -143,8 +141,8 @@ for pat in patients:
     
     idx += 1
     end_post = time.time()
-    print "Time for post logic: " 
-    print (end_post - start_post)
+    #print "Time for post logic: " 
+    #print (end_post - start_post)
 
 
 for feature in allCondensedVals:
@@ -160,6 +158,40 @@ for feature in allCondensedVals:
     
     overall_stats[feature]['missing'] = overall_stats[feature]['missing'] / float(idx - count_nodata)
     patient_stats[feature]['missing'] = patient_stats[feature]['missing'] / float(idx - count_nodata)
+
+#compute meta data
+stds_vals = []
+means_vals = []
+for feature in patient_stats:
+    stds_vals.append(patient_stats[feature]['value']['standard_dev'])
+    means_vals.append(patient_stats[feature]['value']['mean'])
+meta_statistics = {'mean_of_means': np.mean(means_vals), 'std_of_means': np.std(means_vals), 'mean_of_stds': np.mean(stds_vals), 'std_of_stds': np.std(stds_vals) }
+  
+csv_dict = copy.deepcopy(channelsDict)
+params_dict = {'R_i': np.nan , 'E[R_i]': np.nan, 'std[R_i]': np.nan, 'V[R_i]': np.nan, 'R': np.nan, 'E[X_vi]': np.nan, 'std[X_vi]': np.nan, 'E[E[X_vi]]': np.nan, 'std[E[X_vi]]': np.nan, 'E[std[X_vi]]': np.nan, 'std[std[X_vi]]': np.nan, 'E[X_v]': np.nan, 'std[X_v]': np.nan, 'F_v': np.nan }
+for feature in csv_dict:
+    print feature 
+    csv_dict[feature] = copy.deepcopy(params_dict)
+    print csv_dict[feature]
+    csv_dict[feature]['E[R_i]'] = patient_stats[feature]['sampling_rate']['mean']
+    csv_dict[feature]['std[R_i]'] = patient_stats[feature]['sampling_rate']['standard_dev']
+    csv_dict[feature]['V[R_i]'] = patient_stats[feature]['sampling_rate']['standard_dev']**2
+    csv_dict[feature]['R'] = overall_stats[feature]['sampling_rate']['mean']
+    csv_dict[feature]['E[X_vi]'] = patient_stats[feature]['value']['mean']
+    csv_dict[feature]['std[X_vi]'] = patient_stats[feature]['value']['standard_dev']
+    csv_dict[feature]['E[X_v]'] = overall_stats[feature]['value']['mean']
+    csv_dict[feature]['std[X_v]'] = overall_stats[feature]['value']['standard_dev']
+    csv_dict[feature]['F_v'] = overall_stats[feature]['missing']
+    if feature == 'Albumin':
+        csv_dict[feature]['E[E[X_vi]]'] = meta_statistics['mean_of_means']
+        csv_dict[feature]['std[E[X_vi]]'] = meta_statistics['std_of_means']
+        csv_dict[feature]['E[std[X_vi]]'] = meta_statistics['mean_of_stds']
+        csv_dict[feature]['std[std[X_vi]]'] = meta_statistics['std_of_stds']
+csv_df = DataFrame.from_dict(csv_dict).sort_index().transpose().sort_index()
+print csv_df
+csv_df.to_csv('/Users/dbell/Desktop/csv.csv')
+
+
 
 print 'overall'        
 print overall_stats
@@ -190,7 +222,7 @@ for line in csv.reader(outcomeFile, delimiter=','):
         length_stays.append(los)
         if hasattr(patObj, '_condValues'):
             del patObj._condValues
-        patObj.to_pickle('/Users/dbell/Desktop/pickled_data')
+        #patObj.to_pickle('/Users/dbell/Desktop/pickled_data')
     else:
         no_outcome += 1
 deathPercentage = float(deathCount) / float(numPatients)
