@@ -64,6 +64,8 @@ allPatientObjs = dict()
 #lmf = np.zeros((N,))                # Last-first duration
 
 allCondensedVals = None
+deathAllCondensedVals = None
+aliveAllCondensedVals = None
 channels = 'channels.txt'
 channelsDict = dict()
 
@@ -79,9 +81,23 @@ data_dict = {'sampling_rate': {'mean': [], 'standard_dev': None }, 'value': {'me
 
 patient_stats = copy.deepcopy(channelsDict)
 overall_stats = copy.deepcopy(channelsDict)
+
+death_patient_stats = copy.deepcopy(channelsDict)
+alive_patient_stats = copy.deepcopy(channelsDict)
+
+death_overall_stats = copy.deepcopy(channelsDict)
+alive_overall_stats = copy.deepcopy(channelsDict)
+
 for key in channelsDict:
     patient_stats[key] = copy.deepcopy(data_dict)
     overall_stats[key] = copy.deepcopy(data_dict)
+    
+    alive_patient_stats[key] = copy.deepcopy(data_dict)
+    alive_overall_stats[key] = copy.deepcopy(data_dict)
+    
+    death_patient_stats[key] = copy.deepcopy(data_dict)
+    death_overall_stats[key] = copy.deepcopy(data_dict)
+
 
 for key in channelsDict:
     channelsDict[key] = []
@@ -234,7 +250,81 @@ print 'No data: '
 print count_nodata
 print 'No outcome: '
 print no_outcome
+
+#by outcome 
+for pat2 in patients:
+    if not hasattr(pat2, 'death'):
+        pass
+    elif pat2.death:
+        if deathAllCondensedVals is None: 
+            deathAllCondensedVals = subj.condensed_values()
+        else:
+            condVals = pat2.condensed_values()
+            for feature in deathAllCondensedVals:
+                if condVals[feature]:
+                    death_patient_stats[feature]['value']['mean'].append( np.mean(condVals[feature]) )
+                    death_patient_stats[feature]['sampling_rate']['mean'].append( len(condVals[feature]) )
+                
+                    death_overall_stats[feature]['value']['mean'] += condVals[feature]
+                    death_overall_stats[feature]['sampling_rate']['mean'].append( len(condVals[feature]) )
+                
+                    deathAllCondensedVals[feature] += (condVals[feature])
+                else:
+                    death_patient_stats[feature]['missing'] = 1
+                    death_overall_stats[feature]['missing'] += 1
+    else:
+        if aliveAllCondensedVals is None: 
+            aliveAllCondensedVals = subj.condensed_values()
+        else:
+            condVals = pat2.condensed_values()
+            for feature in allCondensedVals:
+                if condVals[feature]:
+                    alive_patient_stats[feature]['value']['mean'].append( np.mean(condVals[feature]) )
+                    alive_patient_stats[feature]['sampling_rate']['mean'].append( len(condVals[feature]) )
+                
+                    alive_overall_stats[feature]['value']['mean'] += condVals[feature]
+                    alive_overall_stats[feature]['sampling_rate']['mean'].append( len(condVals[feature]) )
+                
+                    aliveAllCondensedVals[feature] += (condVals[feature])
+                else:
+                    alive_patient_stats[feature]['missing'] = 1
+                    alive_overall_stats[feature]['missing'] += 1
     
+for feature in allCondensedVals:
+    death_overall_stats[feature]['value']['standard_dev'] = np.std(death_overall_stats[feature]['value']['mean'])
+    death_overall_stats[feature]['value']['mean'] = np.mean(death_overall_stats[feature]['value']['mean'])
+    death_overall_stats[feature]['sampling_rate']['standard_dev'] = np.std(death_overall_stats[feature]['sampling_rate']['mean'])
+    death_overall_stats[feature]['sampling_rate']['mean'] = np.mean(death_overall_stats[feature]['sampling_rate']['mean'])
+    
+    death_patient_stats[feature]['value']['standard_dev'] = np.std(death_patient_stats[feature]['value']['mean'])
+    death_patient_stats[feature]['value']['mean'] = np.mean(death_patient_stats[feature]['value']['mean'])
+    death_patient_stats[feature]['sampling_rate']['standard_dev'] = np.std(death_patient_stats[feature]['sampling_rate']['mean'])
+    death_patient_stats[feature]['sampling_rate']['mean'] = np.mean(death_patient_stats[feature]['sampling_rate']['mean'])
+    
+    death_overall_stats[feature]['missing'] = death_overall_stats[feature]['missing'] / float(deathCount)
+    death_patient_stats[feature]['missing'] = death_patient_stats[feature]['missing'] / float(deathCount)
+    
+    alive_overall_stats[feature]['value']['standard_dev'] = np.std(alive_overall_stats[feature]['value']['mean'])
+    alive_overall_stats[feature]['value']['mean'] = np.mean(alive_overall_stats[feature]['value']['mean'])
+    alive_overall_stats[feature]['sampling_rate']['standard_dev'] = np.std(alive_overall_stats[feature]['sampling_rate']['mean'])
+    alive_overall_stats[feature]['sampling_rate']['mean'] = np.mean(alive_overall_stats[feature]['sampling_rate']['mean'])
+    
+    alive_patient_stats[feature]['value']['standard_dev'] = np.std(alive_patient_stats[feature]['value']['mean'])
+    alive_patient_stats[feature]['value']['mean'] = np.mean(alive_patient_stats[feature]['value']['mean'])
+    alive_patient_stats[feature]['sampling_rate']['standard_dev'] = np.std(alive_patient_stats[feature]['sampling_rate']['mean'])
+    alive_patient_stats[feature]['sampling_rate']['mean'] = np.mean(alive_patient_stats[feature]['sampling_rate']['mean'])
+    
+    alive_overall_stats[feature]['missing'] = alive_overall_stats[feature]['missing'] / float(deathCount)
+    alive_patient_stats[feature]['missing'] = alive_patient_stats[feature]['missing'] / float(deathCount)
+    
+print 'death overall'
+print death_overall_stats
+print 'alive overall'
+print alive_overall_stats
+print 'death patient'
+print death_patient_stats
+print 'alive patient'
+print alive_patient_stats
 #features = features[0:idx,]
 #epids = epids[0:idx]
 #Traw = Traw[0:idx]
