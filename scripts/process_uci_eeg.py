@@ -109,7 +109,7 @@ for dirname in glob.glob(os.path.join(args.data_dir, 'co*')):
             
             # code instance
             idx += 1
-    sys.stdout.write('DONE!\n')
+        sys.stdout.write('DONE!\n')
 
 X           = X[:,:,0:idx]
 T           = T[0:idx]
