@@ -61,9 +61,7 @@ An example being:
 ...
 """
 
-## IMPORTS: I've suggested a few that you'll probably want to use. Google them.
 import csv    # this is a plain module import
-import glob
 import gzip
 import os
 import pickle
@@ -185,6 +183,8 @@ class EegTrial:
         self.stimulus = str(stimulus)
         self.data = DataFrame(data)
         self.channels = channels
+        self.data.sort_index(inplace=True)
+        self.data.sort(axis=1, inplace=True)
      
     @staticmethod
     def from_file(filename):
@@ -233,6 +233,12 @@ class EegTrial:
 
         return EegTrial(subject_id=subject_id, alcoholic=alcoholic, trial_num=trial_num, stimulus=stimulus, data=DataFrame(data), channels=Series(channels))
 
+    def get_channel_names(self):
+        return list(self.data.columns)
+    
+    def get_channel_numbers(self):
+        return [ self.channels[c] for c in self.data.columns ]
+
     def as_nparray(self):
         """Spits out data as a D x T numpy.array (D=# channels, T=# samples)
 
@@ -242,7 +248,7 @@ class EegTrial:
         columns to channel numbers,then sort the columns, then sort the index, then
         transform to numpy.array, then finally take the transpose to get T x D.
         """
-        return self.data.sort(axis=1).sort_index().reset_index().as_matrix()
+        return self.data.as_matrix()
 
     def to_pickle(self, path='', filename=None):
         """Pickle (serialize) EegTrial object to disk.
